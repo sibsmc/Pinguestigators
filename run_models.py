@@ -3,16 +3,18 @@
 
 import pandas as pd
 import numpy as np
-# from Models import DiseaseCAT
+import copy
+from Models import DiseaseCATMean, SimpleRegressor
 
+from sklearn import metrics
 # Load datasets;
 DATA_WITHSEQ = pd.read_csv("Data/GTEx_pancreas_liver_images_liverfat_pancreasfat_seq.csv")
 DATA_ALL = pd.read_csv("Data/GTEx_pancreas_liver_images_liverfat_pancreasfat.csv")
 
-CFAT_LIVER = "Fat.Percent_liver"
-CFAT_PANC = "Fat.Percent_pancreas"
+CFAT_LIVER = "Fat.Percentage_liver"
+CFAT_PANC = "Fat.Percentage_pancreas"
 
-Models = []
+Models = [DiseaseCATMean, SimpleRegressor]
 
 # Select which dataset is going to be used.
 DATASET = DATA_ALL
@@ -35,27 +37,6 @@ def SplitDataset(dataset, pct_test=0.1):
     return TRAIN, TEST
 
 
-def CalculateMSE(REAL, PRED):
-    """
-
-    Each of REAL and PRED come in as [(liver%, panc%)]...
-
-    Output: [liver, pancMSE]
-    """
-    nb_cats = len(REAL[0])
-    result = []
-
-    for i in range(nb_cats):
-        cat_results = []
-        for r, p in zip(REAL, PRED):
-            e = (REAL - PRED) ** 2
-            cat_results.append(e)
-
-        result.append(np.mean(cat_results))
-
-    return result
-
-
 DATASET_TRAIN, DATASET_TEST = SplitDataset(DATASET)
 
 
@@ -63,13 +44,16 @@ for Model in Models:
     # Initialize model;
     model = Model.Model(DATASET_TRAIN)
 
+
     REAL = []
     PREDICTED = []
-    for ROW in DATASET_TEST.iloc():
-        _ROW = ROW.copy
+
+    for i, ROW in DATASET_TEST.iterrows():
+
+        _ROW = ROW.copy()
 
         # Fetch real fat % from patient record.
-        real = (_ROW[CFAT_LIVER], _ROW[CFAT_PANC])
+        real = [_ROW[CFAT_LIVER], _ROW[CFAT_PANC]]
         REAL.append(real)
 
         # Delete result values... the model should not know them.
@@ -79,11 +63,12 @@ for Model in Models:
         pred = model.Predict(_ROW)
         PREDICTED.append(pred)
 
-        print("Real %s\nPred %s" % (real, pred))
+        print("Real %s\nPred %s\n\n" % (real, pred))
 
-    MSEs = CalculateMSE(REAL, PREDICTED)
+
+    MSEs = metrics.mean_squared_error(REAL, PREDICTED, multioutput="raw_values")
+
     print("Model %s MSE:" % (model.name))
-
     print("Liver: %.2f" % MSEs[0])
     print("Pancreas: %.2f" % MSEs[1])
 
