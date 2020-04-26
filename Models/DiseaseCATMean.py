@@ -9,8 +9,8 @@ from sklearn.linear_model import LinearRegression
 PCAT_PAN = "Pathology.Categories_pancreas"
 PCAT_LIV = "Pathology.Categories_liver"
 
-FPCT_PAN = "Fat.Percentage_pancreas"
-FPCT_LIV = "Fat.Percentage_liver"
+FPCT_PAN = "Fat,Percentage_pancreas"
+FPCT_LIV = "Fat,Percentage_liver"
 
 
 class Model():
