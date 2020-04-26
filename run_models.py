@@ -3,22 +3,26 @@
 
 import pandas as pd
 import numpy as np
-# from Models import DiseaseCAT
+import copy
+from Models import DiseaseCATMean, RNA_SVR
+
+from sklearn import metrics
 
 # Load datasets;
 DATA_WITHSEQ = pd.read_csv("Data/GTEx_pancreas_liver_images_liverfat_pancreasfat_seq.csv")
 DATA_ALL = pd.read_csv("Data/GTEx_pancreas_liver_images_liverfat_pancreasfat.csv")
 
-CFAT_LIVER = "Fat.Percent_liver"
-CFAT_PANC = "Fat.Percent_pancreas"
 
-Models = []
+CFAT_LIVER = "Fat,Percentage_liver"
+CFAT_PANC = "Fat,Percentage_pancreas"
+
+Models = [DiseaseCATMean, RNA_SVR]
 
 # Select which dataset is going to be used.
-DATASET = DATA_ALL
+DATASET = DATA_WITHSEQ
 
 
-def SplitDataset(dataset, pct_test=0.1):
+def SplitDataset(dataset, pct_test=10):
     """
 
     Splits the dataset randomly in a training and a testing part.
@@ -26,38 +30,24 @@ def SplitDataset(dataset, pct_test=0.1):
     """
 
     SIZE = dataset.shape[0]
-    all_rows = range(SIZE)
-    test_mask = np.random.choice(all_rows, size=round(pct_test * SIZE))
+    TEST_SIZE = pct_test / SIZE * 100
 
-    TRAIN = dataset.iloc[~test_mask]
+    all_rows = range(SIZE)
+    test_mask = np.random.choice(all_rows, size=round(TEST_SIZE))
+
+    TRAIN = dataset.drop(test_mask, axis=0)
     TEST = dataset.iloc[test_mask]
 
     return TRAIN, TEST
 
 
-def CalculateMSE(REAL, PRED):
-    """
-
-    Each of REAL and PRED come in as [(liver%, panc%)]...
-
-    Output: [liver, pancMSE]
-    """
-    nb_cats = len(REAL[0])
-    result = []
-
-    for i in range(nb_cats):
-        cat_results = []
-        for r, p in zip(REAL, PRED):
-            e = (REAL - PRED) ** 2
-            cat_results.append(e)
-
-        result.append(np.mean(cat_results))
-
-    return result
-
-
 DATASET_TRAIN, DATASET_TEST = SplitDataset(DATASET)
-
+print()
+print("-- Pinguestigators FAT predictors --")
+print("Total dataset size: %i" % DATASET.shape[0])
+print("Training dataset size: %i" % DATASET_TRAIN.shape[0])
+print("Testing dataset size: %i" % DATASET_TEST.shape[0])
+print()
 
 for Model in Models:
     # Initialize model;
@@ -65,11 +55,13 @@ for Model in Models:
 
     REAL = []
     PREDICTED = []
-    for ROW in DATASET_TEST.iloc():
-        _ROW = ROW.copy
+
+    for i, ROW in DATASET_TEST.iterrows():
+
+        _ROW = ROW.copy()
 
         # Fetch real fat % from patient record.
-        real = (_ROW[CFAT_LIVER], _ROW[CFAT_PANC])
+        real = [_ROW[CFAT_LIVER], _ROW[CFAT_PANC]]
         REAL.append(real)
 
         # Delete result values... the model should not know them.
@@ -79,11 +71,12 @@ for Model in Models:
         pred = model.Predict(_ROW)
         PREDICTED.append(pred)
 
-        print("Real %s\nPred %s" % (real, pred))
+        print("Real %s\nPred %s\n\n" % (real, pred))
 
-    MSEs = CalculateMSE(REAL, PREDICTED)
-    print("Model %s MSE:" % (model.name))
 
+    MSEs = metrics.mean_squared_error(REAL, PREDICTED, multioutput="raw_values")
+
+    print("Model <%s> MSE:" % (model.name))
     print("Liver: %.2f" % MSEs[0])
     print("Pancreas: %.2f" % MSEs[1])
 
