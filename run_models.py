@@ -7,6 +7,7 @@ import copy
 from Models import DiseaseCATMean, RNA_SVR
 
 from sklearn import metrics
+
 # Load datasets;
 DATA_WITHSEQ = pd.read_csv("Data/GTEx_pancreas_liver_images_liverfat_pancreasfat_seq.csv")
 DATA_ALL = pd.read_csv("Data/GTEx_pancreas_liver_images_liverfat_pancreasfat.csv")
@@ -42,7 +43,7 @@ def SplitDataset(dataset, pct_test=10):
 
 DATASET_TRAIN, DATASET_TEST = SplitDataset(DATASET)
 print()
-print("Pinguestigators predictor:")
+print("-- Pinguestigators FAT predictors --")
 print("Total dataset size: %i" % DATASET.shape[0])
 print("Training dataset size: %i" % DATASET_TRAIN.shape[0])
 print("Testing dataset size: %i" % DATASET_TEST.shape[0])
