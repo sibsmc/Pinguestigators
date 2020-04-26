@@ -64,7 +64,7 @@ def BuildModel(dataset, kind):
         if kind in ["pancreas", "liver"]:
             return row[FatPercentRow(kind)]
 
-    model = sklearn.svm.SVR(kernel="linear", tol=1e-9)
+    model = sklearn.svm.SVR(kernel="linear", tol=1e-10)
 
     pre_inputs = [RowToModelInput(row, kind) for i, row in dataset.iterrows()]
 

@@ -76,7 +76,7 @@ for Model in Models:
 
     MSEs = metrics.mean_squared_error(REAL, PREDICTED, multioutput="raw_values")
 
-    print("Model %s MSE:" % (model.name))
+    print("Model <%s> MSE:" % (model.name))
     print("Liver: %.2f" % MSEs[0])
     print("Pancreas: %.2f" % MSEs[1])
 
