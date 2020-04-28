@@ -45,6 +45,14 @@ def FatPercentRow(kind):
     return "Fat,Percentage_%s" % kind
 
 
+def CheckResult(R):
+    if 0 <= R <= 100:
+        return R
+    else:
+        print("Bizarre result: %s" % R)
+        return 10
+
+
 class Model():
     name = "RNAseq SVR"
     def __init__(self, testing_dataset):
@@ -55,20 +63,25 @@ class Model():
     def Predict(self, Input):
         try:
             pancreas_base = [RowToModelInput(Input, "pancreas")]
-            pancreas_fat = self.modelPancreas.predict(pancreas_base)
+            pancreas_fat = self.modelPancreas.predict(pancreas_base)[0]
 
             liver_base = [RowToModelInput(Input, "liver")]
-            liver_fat = self.modelLiver.predict(liver_base)
+            liver_fat = self.modelLiver.predict(liver_base)[0]
 
-            return [liver_fat[0], pancreas_fat[0]]
+            return [CheckResult(liver_fat), CheckResult(pancreas_fat)]
+
         except (KeyError, ValueError) as e:
-            print("Prediction error (missing RNAseq data for sample)....")
+            print("Prediction error (missing RNAseq data for sample).... \n%s" % e)
             return [20, 20]
 
 
 def RowToModelInput(row, kind):
+    """
 
+    This converts a patient row into inputs for the SVR.
+    In this model we use RNAseq values as inputs.
 
+    """
     SampleID = row[TissueSampleRow(kind)]
 
     TrueSampleIDs = [r for r in TissueSamples.columns
@@ -78,7 +91,10 @@ def RowToModelInput(row, kind):
         return None
 
     TrueSampleID = TrueSampleIDs[0]
+    assert len(TrueSampleIDs) <= 1
+
     try:
+
         sample = TissueSamples[[TrueSampleID]]
 
         Masked = sample[GeneMask[kind]]
@@ -94,7 +110,8 @@ def BuildModel(dataset, kind):
         if kind in ["pancreas", "liver"]:
             return row[FatPercentRow(kind)]
 
-    model = sklearn.svm.SVR(degree=2, kernel="poly", gamma="auto", tol=1e-7, max_iter=10e6)
+    model = sklearn.svm.SVR(degree=2, kernel="poly",
+                            gamma="auto", tol=1e-7, max_iter=-1)
 
     pre_inputs = [RowToModelInput(row, kind) for i, row in dataset.iterrows()]
 
